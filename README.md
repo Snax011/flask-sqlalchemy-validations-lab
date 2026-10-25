@@ -73,6 +73,14 @@ You'll work on adding validators to both the Author and Post models.
   * category: `Fiction` or `Non-Fiction` only
   * title: must contain "Won't Believe", "Secret", "Top", and/or "Guess"
 
+### Validation behavior
+
+Model validation rejects missing author names, duplicate author names, and
+phone numbers that are not exactly ten digits. Posts require a clickbait
+phrase in the title, at least 250 characters of content, and a supported
+category; summaries may be omitted but cannot exceed 250 characters. Invalid
+values raise `ValueError` before they can be persisted.
+
 ### Task 3: Develop, Test, and Refine the Code
 
 #### Step 1: Implement Validations

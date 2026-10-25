@@ -1,5 +1,8 @@
+import re
+
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import validates
+
 db = SQLAlchemy()
 
 class Author(db.Model):
@@ -11,7 +14,30 @@ class Author(db.Model):
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, onupdate=db.func.now())
 
-    # Add validators 
+    def __init__(self, **kwargs):
+        kwargs.setdefault('name', None)
+        super().__init__(**kwargs)
+
+    @validates('name')
+    def validate_name(self, key, name):
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError('Author name is required.')
+
+        existing_author = Author.query.filter(
+            Author.name == name,
+            Author.id != self.id if self.id is not None else True,
+        ).first()
+        if existing_author is not None:
+            raise ValueError('Author name must be unique.')
+        return name
+
+    @validates('phone_number')
+    def validate_phone_number(self, key, phone_number):
+        if not isinstance(phone_number, str) or not re.fullmatch(
+            r'[0-9]{10}', phone_number
+        ):
+            raise ValueError('Phone number must contain exactly ten digits.')
+        return phone_number
 
     def __repr__(self):
         return f'Author(id={self.id}, name={self.name})'
@@ -27,7 +53,40 @@ class Post(db.Model):
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, onupdate=db.func.now())
 
-    # Add validators  
+    def __init__(self, **kwargs):
+        for required_field in ('title', 'content', 'category'):
+            kwargs.setdefault(required_field, None)
+        super().__init__(**kwargs)
+
+    @validates('title')
+    def validate_title(self, key, title):
+        clickbait_phrases = ("Won't Believe", 'Secret', 'Top', 'Guess')
+        if not isinstance(title, str) or not any(
+            phrase.casefold() in title.casefold()
+            for phrase in clickbait_phrases
+        ):
+            raise ValueError('Title must contain a clickbait phrase.')
+        return title
+
+    @validates('content')
+    def validate_content(self, key, content):
+        if not isinstance(content, str) or len(content) < 250:
+            raise ValueError('Post content must be at least 250 characters.')
+        return content
+
+    @validates('summary')
+    def validate_summary(self, key, summary):
+        if summary is not None and (
+            not isinstance(summary, str) or len(summary) > 250
+        ):
+            raise ValueError('Post summary cannot exceed 250 characters.')
+        return summary
+
+    @validates('category')
+    def validate_category(self, key, category):
+        if category not in ('Fiction', 'Non-Fiction'):
+            raise ValueError('Category must be Fiction or Non-Fiction.')
+        return category
 
 
     def __repr__(self):
